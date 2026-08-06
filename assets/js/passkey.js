@@ -385,8 +385,7 @@ var PasskeyManager = (function() {
             isMobile: isMobile,
             preferUserVerification: isSafari,
             preferResidentKey: isAndroid || (isSafari && isIOS),
-            needsExtendedTimeout: isAndroid || isFirefox || isMobile || (isSafari && (isIOS || isMac)),
-            supportsThirdPartyHints: BrowserDetector.isChrome() || BrowserDetector.isEdge()
+            needsExtendedTimeout: isAndroid || isFirefox || isMobile || (isSafari && (isIOS || isMac))
         };
     }
 
@@ -628,49 +627,16 @@ var PasskeyManager = (function() {
         });
     }
 
-    function mergeHints(existingHints, addedHints) {
-        var merged = [];
-
-        function pushUnique(value) {
-            if (!value || typeof value !== 'string') {
-                return;
-            }
-            if (merged.indexOf(value) === -1) {
-                merged.push(value);
-            }
-        }
-
-        if (existingHints && existingHints.length) {
-            for (var i = 0; i < existingHints.length; i++) {
-                pushUnique(existingHints[i]);
-            }
-        }
-
-        if (addedHints && addedHints.length) {
-            for (var j = 0; j < addedHints.length; j++) {
-                pushUnique(addedHints[j]);
-            }
-        }
-
-        return merged;
-    }
-
     /**
-     * 兼容第三方通行密钥管理器（如 Bitwarden）
+     * 规范化认证器参数，同时保持浏览器中立选择
      */
-    function applyThirdPartyManagerSupport(publicKeyOptions, mode) {
-        var profile = getCompatibilityProfile();
-
+    function normalizeCredentialOptions(publicKeyOptions, mode) {
         if (publicKeyOptions.allowCredentials && publicKeyOptions.allowCredentials.length > 0) {
             publicKeyOptions.allowCredentials = normalizeCredentialDescriptors(publicKeyOptions.allowCredentials);
         }
 
         if (publicKeyOptions.excludeCredentials && publicKeyOptions.excludeCredentials.length > 0) {
             publicKeyOptions.excludeCredentials = normalizeCredentialDescriptors(publicKeyOptions.excludeCredentials);
-        }
-
-        if (typeof publicKeyOptions.hints !== 'undefined' || profile.supportsThirdPartyHints) {
-            publicKeyOptions.hints = mergeHints(publicKeyOptions.hints, ['client-device', 'security-key']);
         }
 
         if (!publicKeyOptions.extensions) {
@@ -684,82 +650,17 @@ var PasskeyManager = (function() {
         return publicKeyOptions;
     }
 
-    function cloneCreatePublicKeyOptions(publicKeyOptions) {
-        var cloned = {};
-        var key;
+    function createCredential(publicKeyOptions) {
+        normalizeCredentialOptions(publicKeyOptions, 'create');
 
-        for (key in publicKeyOptions) {
-            if (publicKeyOptions.hasOwnProperty(key)) {
-                cloned[key] = publicKeyOptions[key];
-            }
-        }
-
-        if (publicKeyOptions.authenticatorSelection) {
-            cloned.authenticatorSelection = {};
-            for (key in publicKeyOptions.authenticatorSelection) {
-                if (publicKeyOptions.authenticatorSelection.hasOwnProperty(key)) {
-                    cloned.authenticatorSelection[key] = publicKeyOptions.authenticatorSelection[key];
-                }
-            }
-        }
-
-        if (publicKeyOptions.excludeCredentials) {
-            cloned.excludeCredentials = publicKeyOptions.excludeCredentials.slice();
-        }
-
-        if (publicKeyOptions.pubKeyCredParams) {
-            cloned.pubKeyCredParams = publicKeyOptions.pubKeyCredParams.slice();
-        }
-
-        if (publicKeyOptions.hints) {
-            cloned.hints = publicKeyOptions.hints.slice();
-        }
-
-        if (publicKeyOptions.extensions) {
-            cloned.extensions = {};
-            for (key in publicKeyOptions.extensions) {
-                if (publicKeyOptions.extensions.hasOwnProperty(key)) {
-                    cloned.extensions[key] = publicKeyOptions.extensions[key];
-                }
-            }
-        }
-
-        return cloned;
+        return navigator.credentials.create({ publicKey: publicKeyOptions });
     }
 
-    function createCredentialWithThirdPartyFallback(publicKeyOptions) {
-        applyThirdPartyManagerSupport(publicKeyOptions, 'create');
-
-        return navigator.credentials.create({ publicKey: publicKeyOptions })
-            .catch(function(error) {
-                var canRetry = error && (error.name === 'NotSupportedError' || error.name === 'ConstraintError');
-                var isPlatformOnly = publicKeyOptions.authenticatorSelection &&
-                    publicKeyOptions.authenticatorSelection.authenticatorAttachment === 'platform';
-
-                if (!canRetry || !isPlatformOnly) {
-                    throw error;
-                }
-
-                var retryOptions = cloneCreatePublicKeyOptions(publicKeyOptions);
-                delete retryOptions.authenticatorSelection.authenticatorAttachment;
-                applyThirdPartyManagerSupport(retryOptions, 'create');
-                return navigator.credentials.create({ publicKey: retryOptions });
-            });
-    }
-
-    function getCredentialWithThirdPartySupport(publicKeyOptions) {
-        applyThirdPartyManagerSupport(publicKeyOptions, 'get');
+    function getCredential(publicKeyOptions) {
+        normalizeCredentialOptions(publicKeyOptions, 'get');
 
         return navigator.credentials.get({
-            publicKey: publicKeyOptions,
-            mediation: 'optional'
-        }).catch(function(error) {
-            if (error && error.name === 'TypeError') {
-                return navigator.credentials.get({
-                    publicKey: publicKeyOptions
-                });
-            }
-            throw error;
+            publicKey: publicKeyOptions
         });
     }
 
@@ -992,7 +893,7 @@ var PasskeyManager = (function() {
                         publicKeyOptions.excludeCredentials = decodeCredentialDescriptors(options.excludeCredentials);
                     }
 
-                    return createCredentialWithThirdPartyFallback(publicKeyOptions);
+                    return createCredential(publicKeyOptions);
                 })
                 .then(function(credential) {
                     if (!credential) {
@@ -1059,7 +960,7 @@ var PasskeyManager = (function() {
                     var options = data.data;
                     var publicKeyOptions = buildLoginPublicKeyOptions(options);
 
-                    return getCredentialWithThirdPartySupport(publicKeyOptions);
+                    return getCredential(publicKeyOptions);
                 })
                 .then(function(assertion) {
                     if (!assertion) {
@@ -1374,7 +1275,7 @@ var PasskeyManager = (function() {
                 }
                 
                 // 创建凭证
-                return createCredentialWithThirdPartyFallback(publicKeyOptions);
+                return createCredential(publicKeyOptions);
             })
             .then(function(credential) {
                 if (!credential) {
@@ -1460,24 +1361,8 @@ var PasskeyManager = (function() {
         return;
     }
     
-    // 如果已经通过 PHP 自动注入，则不再执行 JS 自动注入
-    if (window.PASSKEY_AUTO_INJECTED === true) {
-        console.log('Passkey: Already injected via PHP auto mode');
-        return;
-    }
-    
     // 等待 DOM 加载完成
     function init() {
-        // 更智能的登录页面检测
-        var isLoginPage = window.location.pathname.indexOf('login.php') !== -1 ||
-                         (window.location.pathname.indexOf('/admin/') !== -1 && 
-                          document.querySelector('form[action*="login"]'));
-        
-        if (!isLoginPage) {
-            console.log('Passkey: Not a login page');
-            return;
-        }
-        
         // 检查是否已经注入
         if (document.getElementById('passkey-login-container')) {
             console.log('Passkey: Already injected');
@@ -1485,34 +1370,35 @@ var PasskeyManager = (function() {
         }
         
         // 查找登录表单 - 支持多种选择器
-        var loginForm = document.querySelector('form[action*="login"]') ||
-                       document.querySelector('form[method="post"]') ||
+        var loginForm = document.querySelector('#loggin-form') ||
+                       document.querySelector('form[name="login"]') ||
                        document.querySelector('.typecho-login form') ||
-                       document.querySelector('form[name="login"]');
+                       document.querySelector('form[action*="/action/login"]');
         
         if (!loginForm) {
-            console.warn('Passkey: Login form not found');
             return;
         }
+
+        var loginButton = loginForm.querySelector('button[type="submit"], input[type="submit"]');
+        if (!loginButton) {
+            return;
+        }
+
+        var insertionAnchor = loginButton.closest('.submit, #loggin-buttons, .buttons') || loginButton;
         
         // 创建 Passkey 登录按钮容器
         var container = document.createElement('div');
         container.id = 'passkey-login-container';
-        container.style.cssText = 'margin-top:24px;';
-        
-        // 创建分隔文字
-        var divider = document.createElement('div');
-        divider.style.cssText = 'text-align:center;margin-bottom:10px;color:var(--passport-placeholder,#999);font-size:13px;';
-        divider.textContent = '或';
+        container.style.cssText = 'display:block;width:100%;flex:0 0 auto;margin:6px 0 0;padding:0;border:0;background:transparent;';
         
         // 创建 Passkey 按钮
         var button = document.createElement('button');
         button.type = 'button';
         button.id = 'passkey-login-btn';
-        button.className = 'passport-btn';
-        button.style.cssText = 'width:100%;height:48px;padding:0 24px;font-size:16px;font-weight:600;cursor:pointer;' +
-            'background:var(--passport-primary,#467b96);color:#ffffff;border:none;' +
-            'transition:all 0.2s ease;display:flex;align-items:center;justify-content:center;gap:8px;';
+        button.className = loginButton.className ?
+            loginButton.className + ' passkey-auto-login-btn' :
+            'passport-btn passkey-auto-login-btn';
+        button.style.cssText = 'display:flex;width:100%;max-width:none;margin:0;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;';
         
         // 创建按钮内容（SVG + 文字）
         var buttonIcon = document.createElement('span');
@@ -1525,22 +1411,13 @@ var PasskeyManager = (function() {
         button.appendChild(buttonIcon);
         button.appendChild(buttonText);
         
-        // 按钮悬停效果
-        button.onmouseover = function() {
-            this.style.background = 'var(--passport-primary-light,#5a8bb3)';
-        };
-        button.onmouseout = function() {
-            this.style.background = 'var(--passport-primary,#467b96)';
-        };
-        
-        container.appendChild(divider);
         container.appendChild(button);
         
-        // 智能插入位置
-        if (loginForm.nextSibling) {
-            loginForm.parentNode.insertBefore(container, loginForm.nextSibling);
+        // 插入原登录按钮行之后，并保持在登录表单内部
+        if (insertionAnchor.nextSibling) {
+            insertionAnchor.parentNode.insertBefore(container, insertionAnchor.nextSibling);
         } else {
-            loginForm.parentNode.appendChild(container);
+            insertionAnchor.parentNode.appendChild(container);
         }
         
         // 绑定点击事件

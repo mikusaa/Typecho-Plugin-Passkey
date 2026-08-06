@@ -2,53 +2,15 @@
 
 一个为 Typecho 博客系统提供企业级 Passkey（WebAuthn）登录功能的插件，使用生物识别（指纹、面容）或设备 PIN 快速安全登录。
 
-![Passkey](https://img.shields.io/badge/Passkey-v1.2.0-007EC6?style=for-the-badge&logo=securityscorecard&logoColor=white)
+![Passkey](https://img.shields.io/badge/Passkey-v1.2.2-007EC6?style=for-the-badge&logo=securityscorecard&logoColor=white)
 [![PHP Version](https://img.shields.io/badge/PHP-7.4+-007EC6?style=for-the-badge&logo=php&logoColor=white)](https://www.php.net/)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-![Passkey 管理页面](https://cnb.cool/little-gt/Passkey/-/git/raw/main/screenshots/screenshot3.png)
-
----
-
 ## 🔗 项目地址
 
-为方便快速下载主题、插件和相关依赖，提供以下国内/国际地址：
+当前维护仓库：<https://github.com/mikusaa/Typecho-Plugin-Passkey>
 
-| 项目 | 类型 | 国内地址 | 国际地址 |
-| ---- | ---- | ---- | ---- |
-| BooAdmin | 后台主题 | https://cnb.cool/little-gt/BooAdmin | https://github.com/little-gt/BooAdmin |
-| Passkey | 配套插件 | https://cnb.cool/little-gt/Passkey | https://github.com/little-gt/Passkey |
-| Passport | 配套插件 | https://cnb.cool/little-gt/Passport | https://github.com/little-gt/Passport |
-
-![TDP](https://cnb.cool/little-gt/Passkey/-/git/raw/main/screenshots/cloud-tdp.png)
-
-来自腾讯云先锋会员 时宇（https://cnb.cool/u/coolerxde） 的系列开源项目，专注于提升 Typecho 1.3.0 的性能，用户体验，以及安全性。并且探索新的技术方向。
-
----
-
-## 📸 截图预览
-
-<h3>后台插件设置</h3>
-<p align="center">
-  <img src="https://cnb.cool/little-gt/Passkey/-/git/raw/main/screenshots/screenshot1.png" alt="插件设置页面1" width="100%" />
-</p>
-<p align="center">
-  <img src="https://cnb.cool/little-gt/Passkey/-/git/raw/main/screenshots/screenshot2.png" alt="插件设置页面2" width="100%" />
-</p>
-<p align="center"><em>配置注入模式、RP 信息和注册选项</em></p>
-
-<h3>Passkey 登录界面</h3>
-<p align="center">
-  <img src="https://cnb.cool/little-gt/Passkey/-/git/raw/main/screenshots/screenshot4.png" alt="Passkey 登录页面" width="100%" />
-</p>
-<p align="center"><em>后台登录页面启用 Passkey 登录</em></p>
-
-<h3>Passkey 移动优化</h3>
-<p align="center">
-  <img src="https://cnb.cool/little-gt/Passkey/-/git/raw/main/screenshots/mobile/screenshot1.png" alt="Passkey 插件面板1" width="45%" />
-  <img src="https://cnb.cool/little-gt/Passkey/-/git/raw/main/screenshots/mobile/screenshot2.png" alt="Passkey 插件面板2" width="45%" />
-</p>
-<p align="center"><em>移动端管理页面深度优化，轻松管理 Passkey 设置</em></p>
+本项目基于 [little-gt/Passkey](https://github.com/little-gt/Passkey) 维护，并继续使用 MIT 许可证发布。
 
 ---
 
@@ -271,9 +233,11 @@ php -m | grep -E 'openssl|mbstring|json|session'
    ├── Panel.php          # 管理面板
    ├── WebAuthn.php       # WebAuthn 验证类
    ├── LICENSE
-   └── assist/
+   └── assets/
        ├── css/
-       │   └── style.css   # 样式文件
+       │   ├── panel.css   # 管理面板样式
+       │   ├── style.css   # 通用样式
+       │   └── ieee.svg    # IEEE 标识资源
        └── js/
            └── passkey.js  # 核心 JavaScript
    ```
@@ -291,7 +255,7 @@ php -m | grep -E 'openssl|mbstring|json|session'
 
 ```bash
 cd /var/www/typecho/usr/plugins/
-git clone https://github.com/little-gt/Passkey/Passkey.git
+git clone https://github.com/mikusaa/Typecho-Plugin-Passkey.git Passkey
 chmod -R 755 Passkey
 ```
 
@@ -307,9 +271,9 @@ chmod -R 755 Passkey
 插件会自动在 Typecho 登录页面注入 Passkey 登录按钮，无需修改任何代码。
 
 **实现方式：**
-- 在主题 `header.php` 中调用 `$this->header()` 时自动注入 CSS 和 JS 资源
+- 通过 Typecho 前台和后台模板钩子自动加载 CSS 和 JS 资源
 - JavaScript 检测登录表单并自动插入 Passkey 登录按钮
-- 支持多种主题结构，智能适配不同的表单布局
+- 支持自定义后台目录和多种主题登录表单
 
 #### 手动添加
 需要在主题登录页面中手动添加 Passkey 登录代码。
@@ -321,14 +285,11 @@ chmod -R 755 Passkey
 
 ```php
 <!-- Passkey 登录 -->
-<link rel="stylesheet" href="<?php echo $this->options->pluginUrl; ?>/Passkey/assist/css/style.css?v=1.0.6">
+<link rel="stylesheet" href="<?php echo $this->options->pluginUrl; ?>/Passkey/assets/css/style.css?v=1.2.2">
 <script>var PASSKEY_ACTION_URL = "<?php echo $this->options->index; ?>/action/passkey";</script>
-<script src="<?php echo $this->options->pluginUrl; ?>/Passkey/assist/js/passkey.js?v=1.0.6"></script>
-<div id="passkey-login-container" style="margin-top: 20px;">
-    <div style="text-align: center; margin-bottom: 10px;">
-        <span style="color: #999;">或</span>
-    </div>
-    <button type="button" id="passkey-login-btn" class="btn primary" style="width: 100%;">
+<script src="<?php echo $this->options->pluginUrl; ?>/Passkey/assets/js/passkey.js?v=1.2.2"></script>
+<div id="passkey-login-container">
+    <button type="button" id="passkey-login-btn" class="btn primary w-100">
         使用 Passkey 登录
     </button>
 </div>
@@ -371,10 +332,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
 | 选项 | 说明 |
 |------|------|
-| **允许所有验证器**（推荐） | 支持平台验证器（Windows Hello、Touch ID）和跨平台验证器（Bitwarden、1Password、YubiKey） |
+| **允许所有验证器**（推荐） | 不指定认证器类型，由浏览器展示所有兼容的平台验证器、密码管理器或安全密钥 |
 | **仅允许平台验证器** | 只允许设备内置认证器，安全性最高，但无法使用第三方密码管理器 |
 
 ⚠️ **重要：** 在**严格模式**下，无论此处如何设置都将强制使用"仅平台验证器"。
+
+WebAuthn 无法指定或主动唤起某个密码管理器。使用 1Password 前，需要在浏览器中启用其 Passkey 集成，并将当前 RP ID 的凭证保存到 1Password。
 
 ### 5. 安全模式配置
 
@@ -763,7 +726,7 @@ CREATE INDEX idx_login_time ON typecho_passkey_login_logs(login_time);
   "data": {
     "message": "注册成功！欢迎使用 Passkey 登录",
     "isNewUser": true,
-    "redirect": "https://example.com/admin/"
+    "redirect": "https://example.com/custom-backend/"
   }
 }
 ```
@@ -812,7 +775,7 @@ CREATE INDEX idx_login_time ON typecho_passkey_login_logs(login_time);
   "success": true,
   "data": {
     "message": "登录成功",
-    "redirect": "https://example.com/admin/",
+    "redirect": "https://example.com/custom-backend/",
     "user": {
       "name": "username",
       "screenName": "Display Name"
@@ -820,6 +783,8 @@ CREATE INDEX idx_login_time ON typecho_passkey_login_logs(login_time);
   }
 }
 ```
+
+`redirect` 始终来自 Typecho 配置生成的后台地址，不假设后台目录名称。
 
 **响应（凭证未注册，需要注册）：**
 ```json
@@ -1034,6 +999,8 @@ PasskeyManager.showNotification('提示信息', 'info');
 
 | 版本 | 日期 | 说明 | 更新内容 |
 |------|------|------|----------|
+| 1.2.2 | 2026-08-07 | 自动登录按钮样式优化 | 按钮置于登录按钮下方并继承原按钮样式，移除分隔文字与独立底色 |
+| 1.2.1 | 2026-08-07 | 自动注入与认证器兼容修复 | 支持自定义后台目录，修复前台登录按钮注入，并移除认证器提供方优先提示 |
 | 1.2.0 | 2026-07-23 | 样式优化升级 | 对齐 BooAdmin 字体，提升用户体验 |
 | 1.1.4 | 2026-07-15 | 数据库检测更新 | 优化数据库检测逻辑，避免由于不同版本的驱动前缀导致的检测错误 |
 | 1.1.3 | 2026-07-01 | 多项质量更新 | 适配 MySQL、SQLite 和 PostgreSQL 数据库；优化在 BooAdmin 中的显示效果 |

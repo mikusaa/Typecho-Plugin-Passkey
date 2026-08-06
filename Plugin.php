@@ -19,7 +19,7 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
  * 
  * @package Passkey
  * @author GARFIELDTOM
- * @version 1.2.0
+ * @version 1.2.2
  * @link https://www.garfieldtom.cool
  */
 class Plugin implements PluginInterface
@@ -27,7 +27,7 @@ class Plugin implements PluginInterface
     /**
      * 插件版本号 - 用于资源缓存控制
      */
-    const VERSION = '1.2.0';
+    const VERSION = '1.2.2';
     /**
      * 激活插件方法
      */
@@ -159,6 +159,10 @@ class Plugin implements PluginInterface
         // 注册路由
         \Utils\Helper::addRoute('passkey_action', '/action/passkey', 'TypechoPlugin\Passkey\Action', 'action');
         \Utils\Helper::addPanel(3, 'Passkey/Panel.php', 'Passkey 管理', '管理您的 Passkey', 'administrator');
+        \Typecho\Plugin::factory('Widget_Archive')->header = array(__CLASS__, 'header');
+        \Typecho\Plugin::factory('Widget_Archive')->footer = array(__CLASS__, 'footer');
+        \Typecho\Plugin::factory('admin/header.php')->header = array(__CLASS__, 'adminHeader');
+        \Typecho\Plugin::factory('admin/footer.php')->begin = array(__CLASS__, 'adminFooter');
         
         return '插件已激活，请到设置中配置';
     }
@@ -329,9 +333,9 @@ class Plugin implements PluginInterface
                 $modeDescription .= '<p style="margin:10px 0;" class="pk-text-muted">插件会自动在 Typecho 登录页面注入 Passkey 登录按钮，无需修改任何代码。</p>';
                 $modeDescription .= '<strong>实现方式：</strong><br>';
                 $modeDescription .= '<ul style="margin:5px 0;padding-left:20px;" class="pk-text-dim">';
-                $modeDescription .= '<li>在主题 <code>header.php</code> 中调用 <code>$this->header()</code> 时自动注入 CSS 和 JS 资源</li>';
+                $modeDescription .= '<li>通过 Typecho 前台和后台模板钩子自动加载 CSS 和 JS 资源</li>';
                 $modeDescription .= '<li>JavaScript 检测登录表单并自动插入 Passkey 登录按钮</li>';
-                $modeDescription .= '<li>支持多种主题结构，智能适配不同的表单布局</li>';
+                $modeDescription .= '<li>支持自定义后台目录和多种主题登录表单</li>';
                 $modeDescription .= '</ul>';
                 $modeDescription .= '<p style="margin:10px 0;"><strong>注：</strong>如果自动注入在您的后台主题中不生效，请切换为"手动添加"模式。</p>';
                 $modeDescription .= '</div>';
@@ -343,15 +347,15 @@ class Plugin implements PluginInterface
                 $modeDescription .= '<p style="margin:10px 0;" class="pk-text-muted">在您的主题登录页面中手动添加 Passkey 登录代码。</p>';
                 $modeDescription .= '<strong>步骤：</strong><br>';
                 $modeDescription .= '<ol style="margin:5px 0;padding-left:20px;" class="pk-text-dim">';
-                $modeDescription .= '<li>找到主题的登录模板文件（通常是 <code>/admin/login.php</code> 或 <code>page-login.php</code>）</li>';
+                $modeDescription .= '<li>找到 Typecho 后台或主题的登录模板文件（通常名为 <code>login.php</code> 或 <code>page-login.php</code>）</li>';
                 $modeDescription .= '<li>找到登录表单 <code>&lt;form&gt;...&lt;/form&gt;</code></li>';
                 $modeDescription .= '<li>在表单结束标签 <code>&lt;/form&gt;</code> 后面添加以下代码</li>';
                 $modeDescription .= '</ol>';
                 $modeDescription .= '<textarea readonly onclick="this.select()" class="pk-textarea-code" style="width:100%;height:220px;font-family:Consolas,Monaco,monospace;font-size:11px;margin-top:10px;padding:10px;">';
                 $modeDescription .= htmlspecialchars('<!-- Passkey 登录 -->
-<link rel="stylesheet" href="' . $pluginUrl . '/assist/css/style.css?v=' . $version . '">
+<link rel="stylesheet" href="' . $pluginUrl . '/assets/css/style.css?v=' . $version . '">
 <script>var PASSKEY_ACTION_URL = "' . $actionUrl . '";</script>
-<script src="' . $pluginUrl . '/assist/js/passkey.js?v=' . $version . '"></script>
+<script src="' . $pluginUrl . '/assets/js/passkey.js?v=' . $version . '"></script>
 <div id="passkey-login-container" style="margin-top: 20px;">
     <div style="text-align: center; margin-bottom: 10px;">
         <span style="color: #999;">或</span>
@@ -470,15 +474,14 @@ document.addEventListener(\'DOMContentLoaded\', function() {
         $form->addInput($removeDataOnUninstall);
         
         // 认证器类型限制配置
-        // 控制是否仅允许平台内置验证器（如 Windows Hello、Touch ID）
-        // 关闭此选项可支持 Bitwarden、1Password、YubiKey 等第三方跨平台验证器
         $authenticatorDescription = '选择注册 Passkey 时允许使用的认证器类型。<br><br>';
         $authenticatorDescription .= '<div class="pk-info-box--blue" style="padding:10px;margin-top:8px;">';
         $authenticatorDescription .= '<strong>说明：</strong><br>';
         $authenticatorDescription .= '<ul style="margin:5px 0;padding-left:20px;line-height:1.6;" class="pk-text-dim">';
         $authenticatorDescription .= '<li><strong>仅限平台验证器</strong>：只允许设备内置认证器（Windows Hello、Touch ID、Face ID），安全性最高</li>';
-        $authenticatorDescription .= '<li><strong>允许所有验证器</strong>：同时支持第三方密码管理器的 Passkey 功能（Bitwarden、1Password 等）</li>';
+        $authenticatorDescription .= '<li><strong>允许所有验证器</strong>：由浏览器展示所有兼容认证器，包括受支持的第三方密码管理器</li>';
         $authenticatorDescription .= '</ul>';
+        $authenticatorDescription .= '<p style="margin-top:8px;" class="pk-text-muted">WebAuthn 不能指定或主动唤起某个密码管理器；如需使用 1Password，请在浏览器中启用其 Passkey 集成并将凭证保存到 1Password。</p>';
         $authenticatorDescription .= '<p style="margin-top:8px;" class="pk-text-muted"><strong>注意：</strong>在<strong>严格模式</strong>下，无论此处如何设置都将强制使用"仅平台验证器"。</p>';
         $authenticatorDescription .= '</div>';
         
@@ -1644,124 +1647,100 @@ JS;
     }
     
     /**
-     * 在后台头部注入资源
+     * 在前台头部注入自动登录资源
      */
     public static function header()
     {
-        $options = Options::alloc();
-        $pluginUrl = $options->pluginUrl . '/Passkey';
-        $version = self::VERSION;
-        
-        echo '<link rel="stylesheet" href="' . $pluginUrl . '/assist/css/style.css?v=' . $version . '">';
-        echo '<script>var PASSKEY_ACTION_URL = "' . $options->index . '/action/passkey";</script>';
+        if (!self::isAutoMode()) {
+            return;
+        }
+
+        echo self::getHeaderMarkup();
     }
-    
+
     /**
-     * 在后台底部注入资源
+     * 在前台底部加载自动登录脚本
      */
     public static function footer()
     {
-        $options = Options::alloc();
-        $pluginUrl = $options->pluginUrl . '/Passkey';
-        $version = self::VERSION;
-        
-        echo '<script src="' . $pluginUrl . '/assist/js/passkey.js?v=' . $version . '"></script>';
+        if (!self::isAutoMode()) {
+            return;
+        }
+
+        echo self::getFooterMarkup();
     }
-    
+
     /**
-     * 在登录页面注入 Passkey 登录界面
-     * 优化适配 Typecho 登录页面
+     * 在 Typecho 后台登录页头部注入资源
      */
-    public static function render()
+    public static function adminHeader($header)
+    {
+        if (!self::isAutoMode() || !self::isAdminLoginPage()) {
+            return $header;
+        }
+
+        return $header . "\n" . self::getHeaderMarkup();
+    }
+
+    /**
+     * 在 Typecho 后台登录页底部加载脚本
+     */
+    public static function adminFooter()
+    {
+        if (!self::isAutoMode() || !self::isAdminLoginPage()) {
+            return;
+        }
+
+        echo self::getFooterMarkup();
+    }
+
+    private static function isAutoMode()
+    {
+        try {
+            $plugin = Options::alloc()->plugin('Passkey');
+            return $plugin && isset($plugin->mode) && $plugin->mode === 'auto';
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    private static function isAdminLoginPage()
     {
         $options = Options::alloc();
-        
-        // 安全获取插件配置
-        $plugin = null;
-        try {
-            $plugin = $options->plugin('Passkey');
-        } catch (\Exception $e) {
-            // 插件配置不存在
-            return;
+        $requestPath = parse_url(isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '', PHP_URL_PATH);
+        $loginPath = parse_url($options->loginUrl, PHP_URL_PATH);
+
+        if (!is_string($requestPath) || !is_string($loginPath)) {
+            return false;
         }
-        
-        // 仅在自动模式下注入
-        if (!$plugin || !isset($plugin->mode) || $plugin->mode != 'auto') {
-            return;
-        }
-        
-        // 检查是否在登录页面
-        $requestUri = $_SERVER['REQUEST_URI'] ?? '';
-        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-        
-        // 判断是否为登录页面
-        $isLoginPage = strpos($requestUri, 'login.php') !== false || 
-                       strpos($scriptName, 'login.php') !== false ||
-                       (strpos($requestUri, '/admin/') !== false && !isset($_COOKIE['__typecho_uid']));
-        
-        if (!$isLoginPage) {
-            return;
-        }
-        
+
+        $normalizePath = function ($path) {
+            $normalized = '/' . ltrim(rawurldecode($path), '/');
+            return rtrim($normalized, '/');
+        };
+
+        return $normalizePath($requestPath) === $normalizePath($loginPath);
+    }
+
+    private static function getHeaderMarkup()
+    {
+        $options = Options::alloc();
         $pluginUrl = $options->pluginUrl . '/Passkey';
         $version = self::VERSION;
-        ?>
-        <!-- Passkey 自动注入 -->
-        <link rel="stylesheet" href="<?php echo $pluginUrl; ?>/assist/css/style.css?v=<?php echo $version; ?>">
-        <style>
-        .pk-login-divider { border-top: 1px solid #e5e7eb; }
-        .pk-login-divider-text { color: #9ca3af; }
-        @media (prefers-color-scheme: dark) {
-            .pk-login-divider { border-top-color: #333; }
-            .pk-login-divider-text { color: #6b7280; }
-        }
-        </style>
-        <script>var PASSKEY_ACTION_URL = "<?php echo $options->index; ?>/action/passkey";</script>
-        <script src="<?php echo $pluginUrl; ?>/assist/js/passkey.js?v=<?php echo $version; ?>"></script>
-        <script>
-        // 标记为自动注入模式，防止 passkey.js 重复注入
-        window.PASSKEY_AUTO_INJECTED = true;
-        </script>
-        <div id="passkey-login-container" class="pk-login-divider" style="margin-top:15px;padding-top:15px;">
-            <button type="button" id="passkey-login-btn" class="btn btn-l w-100" 
-                style="width:100%;padding:10px;font-size:14px;cursor:pointer;background:#4f46e5;color:white;border:1px solid #4338ca;transition:all 0.2s ease;">
-                使用 Passkey 登录
-            </button>
-        </div>
-        <script>
-        (function() {
-            // 等待 DOM 完全加载
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initPasskeyButton);
-            } else {
-                initPasskeyButton();
-            }
-            
-            function initPasskeyButton() {
-                var passkeyBtn = document.getElementById('passkey-login-btn');
-                if (passkeyBtn && typeof PasskeyManager !== 'undefined') {
-                    // 添加悬停效果
-                    passkeyBtn.onmouseover = function() {
-                        this.style.background = '#4338ca';
-                    };
-                    passkeyBtn.onmouseout = function() {
-                        this.style.background = '#4f46e5';
-                    };
-                    
-                    // 点击事件
-                    passkeyBtn.addEventListener('click', function() {
-                        this.disabled = true;
-                        this.innerHTML = '🔐 正在登录...';
-                        PasskeyManager.login()
-                            .finally(function() {
-                                passkeyBtn.disabled = false;
-                                passkeyBtn.innerHTML = '🔐 使用 Passkey 登录';
-                            });
-                    });
-                }
-            }
-        })();
-        </script>
-        <?php
+
+        return '<link rel="stylesheet" href="' . htmlspecialchars($pluginUrl, ENT_QUOTES, 'UTF-8') . '/assets/css/style.css?v=' . rawurlencode($version) . '">' .
+            '<script>var PASSKEY_ACTION_URL = ' . json_encode(
+                $options->index . '/action/passkey',
+                JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+            ) . ';</script>';
+    }
+
+    private static function getFooterMarkup()
+    {
+        $options = Options::alloc();
+        $pluginUrl = $options->pluginUrl . '/Passkey';
+        $version = self::VERSION;
+
+        return '<script src="' . htmlspecialchars($pluginUrl, ENT_QUOTES, 'UTF-8') . '/assets/js/passkey.js?v=' . rawurlencode($version) . '"></script>';
     }
 }

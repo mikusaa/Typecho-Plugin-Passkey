@@ -1,7 +1,7 @@
 # Passkey 插件安全文档
 
-**最后更新：** 2026年7月23日
-**当前版本：** v1.2.0
+**最后更新：** 2026年8月7日
+**当前版本：** v1.2.2
 
 ---
 
@@ -320,7 +320,7 @@ Content-Type: application/json
   "data": {
     "message": "注册成功！欢迎使用 Passkey 登录",
     "isNewUser": true,
-    "redirect": "https://example.com/admin/"
+    "redirect": "https://example.com/custom-backend/"
   }
 }
 ```
@@ -372,7 +372,7 @@ Content-Type: application/json
   "success": true,
   "data": {
     "message": "登录成功",
-    "redirect": "https://example.com/admin/",
+    "redirect": "https://example.com/custom-backend/",
     "user": {
       "name": "username",
       "screenName": "Display Name"
@@ -380,6 +380,8 @@ Content-Type: application/json
   }
 }
 ```
+
+`redirect` 使用 Typecho 配置生成的后台地址，不依赖固定的后台目录名称。
 
 **响应（凭证未注册，需要注册）：**
 ```json

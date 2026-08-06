@@ -12,18 +12,19 @@ require_once __TYPECHO_ROOT_DIR__ . '/var/Typecho/Common.php';
 
 \Typecho\Common::init();
 
+$options = \Widget\Options::alloc();
+
 // 检查用户登录状态
 $user = \Widget\User::alloc();
 if (!$user->hasLogin()) {
-    \Typecho\Response::getInstance()->redirect('/admin/login.php');
+    \Typecho\Response::getInstance()->redirect($options->loginUrl);
     exit;
 }
 
-$options = \Widget\Options::alloc();
 $pluginUrl = $options->pluginUrl . '/Passkey';
 
 // 获取插件版本号
-$pluginVersion = '1.2.0';
+$pluginVersion = '1.2.2';
 
 // 获取用户头像（矩形设计）
 function getPasskeyAvatar($email, $name, $size = 28) {
@@ -48,9 +49,9 @@ function getPasskeyAvatar($email, $name, $size = 28) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cascadia+Code:ital,wght@0,200..700;1,200..700&family=Inter:wght@100..900&family=Noto+Sans+SC:wght@100..900&display=swap" rel="stylesheet">
     <!-- TailwindCSS -->
-    <link rel="stylesheet" href="<?php echo $pluginUrl; ?>/assist/css/panel.css?v=<?php echo $pluginVersion; ?>">
+    <link rel="stylesheet" href="<?php echo $pluginUrl; ?>/assets/css/panel.css?v=<?php echo $pluginVersion; ?>">
     <!-- Passkey 样式 -->
-    <link rel="stylesheet" href="<?php echo $pluginUrl; ?>/assist/css/style.css?v=<?php echo $pluginVersion; ?>">
+    <link rel="stylesheet" href="<?php echo $pluginUrl; ?>/assets/css/style.css?v=<?php echo $pluginVersion; ?>">
     <!-- Font Awesome -->
     <link href="https://cdn.garfieldtom.cool/resource/libs/fontawesome/7.2.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -249,7 +250,7 @@ function getPasskeyAvatar($email, $name, $size = 28) {
                 <span class="hidden sm:inline">基于 FIDO2/WebAuthn 标准</span>
             </div>
             <div class="flex items-center gap-2 px-3 py-1.5 border" style="border-color: var(--passkey-border); background: var(--passkey-surface-2);">
-                <img src="<?php echo $pluginUrl; ?>/assist/css/ieee.svg" alt="IEEE" width="24" height="auto" class="opacity-70">
+                <img src="<?php echo $pluginUrl; ?>/assets/css/ieee.svg" alt="IEEE" width="24" height="auto" class="opacity-70">
                 <span class="font-medium" style="color: var(--passkey-text);">IEEE Standard</span>
             </div>
         </div>
@@ -278,7 +279,7 @@ function getPasskeyAvatar($email, $name, $size = 28) {
     <script>
         var PASSKEY_ACTION_URL = "<?php echo $options->index; ?>/action/passkey";
     </script>
-    <script src="<?php echo $pluginUrl; ?>/assist/js/passkey.js?v=<?php echo $pluginVersion; ?>"></script>
+    <script src="<?php echo $pluginUrl; ?>/assets/js/passkey.js?v=<?php echo $pluginVersion; ?>"></script>
     <script>
     (function() {
         var listTable = document.getElementById('passkey-list');
