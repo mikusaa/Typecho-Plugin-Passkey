@@ -44,6 +44,12 @@ authenticatorAttachment=platform
 - 按钮宽度占满登录表单。
 - 适配 VOID 窄侧栏和 Typecho 后台登录页面。
 
+### 同步上游 v1.2.1
+
+- 设置页内联 `onclick` 改为 `data-action` 事件委托，移除 `@deprecated` 全局函数。
+- 一并移除参数输入框上残留的 `onchange`/`oninput`（上游遗漏，会在控制台报 `ReferenceError`）。
+- 未同步上游重新生成的 `panel.css`（依赖 BooAdmin 变量与 `color-mix()`，对本插件无实际收益）。
+
 ### 仓库结构
 
 - 插件文件铺平至仓库根目录。
