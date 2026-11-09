@@ -24,7 +24,7 @@ if (!$user->hasLogin()) {
 $pluginUrl = $options->pluginUrl . '/Passkey';
 
 // 获取插件版本号
-$pluginVersion = '1.2.2';
+$pluginVersion = '1.2.3';
 
 // 获取用户头像（矩形设计）
 function getPasskeyAvatar($email, $name, $size = 28) {

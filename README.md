@@ -4,7 +4,7 @@
 
 本仓库基于 [little-gt/Passkey](https://github.com/little-gt/Passkey) 修改维护。插件的完整功能说明、配置方法和安全设计请参考上游仓库。
 
-当前版本：`1.2.2`
+当前版本：`1.2.3`
 
 ## 本仓库修改
 
