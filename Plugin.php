@@ -20,7 +20,7 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
  * @package Passkey
  * @author GARFIELDTOM
  * @version 1.2.2
- * @link https://www.garfieldtom.cool
+ * @link https://github.com/mikusaa/Typecho-Plugin-Passkey
  */
 class Plugin implements PluginInterface
 {

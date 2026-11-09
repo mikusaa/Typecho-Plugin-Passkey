@@ -50,6 +50,10 @@ authenticatorAttachment=platform
 - 一并移除参数输入框上残留的 `onchange`/`oninput`（上游遗漏，会在控制台报 `ReferenceError`）。
 - 未同步上游重新生成的 `panel.css`（依赖 BooAdmin 变量与 `color-mix()`，对本插件无实际收益）。
 
+### 插件信息
+
+- 插件 `@link` 指向本仓库。
+
 ### 仓库结构
 
 - 插件文件铺平至仓库根目录。
